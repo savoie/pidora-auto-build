@@ -3,12 +3,13 @@
 # Setup
 auto_tag='f20-rpfr-updates-automated'
 build_tag='f20-rpfr-updates'
+branch='rpi-3.12.y'
 date=$(date +'%Y%m%d')
 mkdir kerneltemp
 cd kerneltemp
 
 # Retrieves latest commit in default (most stable) branch
-commit_long=$(git ls-remote https://github.com/raspberrypi/linux.git | grep HEAD | cut -f1)
+commit_long=$(git ls-remote https://github.com/raspberrypi/linux.git | grep $branch | cut -f1)
 commit_short=$(echo $commit_long | cut -c1-7)
 wget https://github.com/raspberrypi/linux/tarball/$commit_long
 
@@ -18,15 +19,19 @@ armv6-koji download-build --arch=src $latest_kernel
 rpm2cpio $latest_kernel.src.rpm | cpio -imdv
 
 # Determines version number
-branch=$(git ls-remote https://github.com/raspberrypi/linux.git | grep $commit_long | grep -o 'rpi-[0-9]*\.[0-9]*\..*')
 sublevel=$(curl -s https://raw.githubusercontent.com/raspberrypi/linux/$branch/Makefile | grep -o 'SUBLEVEL = [0-9]*' | grep -o '[0-9]*')
 version="$(echo $branch | grep -o -m1 '[0-9]*\.[0-9]*\.')$sublevel"
 
-# Renames the config file
+# Updates the config file
+tar -xvf $commit_long
 old_version=$(grep -o 'Version:\s*.*' raspberrypi-kernel.spec | grep -o '[0-9]*\.[0-9]*\.[0-9]*')
 old_commit=$(grep -o '%global commit_short\s*.*' raspberrypi-kernel.spec | cut -d ' ' -f3)
 bunzip2 pidora-config-$old_version-$old_commit.bz2
-mv pidora-config-$old_version-$old_commit pidora-config-$version-$commit_short
+mv pidora-config-$old_version-$old_commit ./raspberrypi-linux-$commit_short/.config
+cd raspberrypi-linux-$commit_short
+yes '' | make oldconfig ARCH=arm | grep '(NEW)'
+cp .config ../pidora-config-$version-$commit_short
+cd ..
 bzip2 pidora-config-$version-$commit_short
 
 # Updates the spec file
@@ -39,15 +44,10 @@ sed -i "s/Release:\s*[0-9]*/Release:        1/" raspberrypi-kernel.spec
 # Sets up the document tree and moves files
 rpmdev-setuptree
 rpmdev-wipetree
-mv first32k.bin.bz2 ~/rpmbuild/SOURCES
-mv $commit_long ~/rpmbuild/SOURCES
-mv pidora-config-$version-$commit_short.bz2 ~/rpmbuild/SOURCES
-mv raspberrypi-kernel.spec ~/rpmbuild/SPECS
-
-# Cleans up after itself
-rm *
-cd ..
-rmdir kerneltemp
+cp first32k.bin.bz2 ~/rpmbuild/SOURCES
+cp $commit_long ~/rpmbuild/SOURCES
+cp pidora-config-$version-$commit_short.bz2 ~/rpmbuild/SOURCES
+cp raspberrypi-kernel.spec ~/rpmbuild/SPECS
 
 # Builds the rpm and uploads to koji
 cd ~/rpmbuild/SPECS
@@ -59,4 +59,4 @@ task_id=$(armv6-koji build --scratch --wait $auto_tag $file_name | grep 'Created
 
 # Reports success/failure
 task_status=$(armv6-koji taskinfo $task_id | grep 'State:' | cut -d ' ' -f2)
-echo $task_status
+echo "$task_status ID: $task_id"
