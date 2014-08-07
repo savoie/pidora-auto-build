@@ -5,8 +5,19 @@ auto_tag='f20-rpfr-updates-automated'
 build_tag='f20-rpfr-updates'
 branch='rpi-3.12.y'
 date=$(date +'%Y%m%d')
-mkdir kerneltemp
-cd kerneltemp
+target_email='ceya931@gmail.com'
+
+if [ ! -d ~/pidora-build ]
+then
+	mkdir ~/pidora-build
+fi
+
+if [ ! -d ~/pidora-build/kernel ]
+then
+	mkdir ~/pidora-build/kernel
+fi
+
+cd ~/pidora-build/kernel
 
 # Retrieves latest commit in default (most stable) branch
 commit_long=$(git ls-remote https://github.com/raspberrypi/linux.git | grep $branch | cut -f1)
@@ -29,7 +40,7 @@ old_commit=$(grep -o '%global commit_short\s*.*' raspberrypi-kernel.spec | cut -
 bunzip2 pidora-config-$old_version-$old_commit.bz2
 mv pidora-config-$old_version-$old_commit ./raspberrypi-linux-$commit_short/.config
 cd raspberrypi-linux-$commit_short
-yes '' | make oldconfig ARCH=arm | grep '(NEW)'
+changes=$(yes '' | make oldconfig ARCH=arm | grep '(NEW)')
 cp .config ../pidora-config-$version-$commit_short
 cd ..
 bzip2 pidora-config-$version-$commit_short
@@ -39,7 +50,13 @@ sed -i "s/%global commit_date\s*.*/%global commit_date  $date/" raspberrypi-kern
 sed -i "s/%global commit_short\s*.*/%global commit_short $commit_short/" raspberrypi-kernel.spec
 sed -i "s/%global commit_long\s*.*/%global commit_long  $commit_long/" raspberrypi-kernel.spec
 sed -i "s/Version:\s*.*/Version:        $version/" raspberrypi-kernel.spec
+
+# Fixes that annoying warning -- remove after it's been implemented in a koji build
+sed -i "s/Mon Feb 05 2013/Mon Feb 04 2013/" raspberrypi-kernel.spec
+
+rpmdev-bumpspec -c 'updated to latest commit' -u 'pidora-auto-build' raspberrypi-kernel.spec
 sed -i "s/Release:\s*[0-9]*/Release:        1/" raspberrypi-kernel.spec
+exit
 
 # Sets up the document tree and moves files
 rpmdev-setuptree
@@ -59,4 +76,14 @@ task_id=$(armv6-koji build --scratch --wait $auto_tag $file_name | grep 'Created
 
 # Reports success/failure
 task_status=$(armv6-koji taskinfo $task_id | grep 'State:' | cut -d ' ' -f2)
-echo "$task_status ID: $task_id"
+echo "$task_status (ID: $task_id)"
+
+# Sends email report
+msg="Pidora kernel autobuild ${version} ${commit_long}\n
+Status: $task_status\n
+Task ID: $task_id\n
+Link: http://japan.proximity.on.ca/koji/taskinfo?taskID=$task_id\n
+Configuration changes (set to default):\n----------------------\n"
+
+
+echo -e "$msg$(echo $changes | sed "s/\s\[/: /g" | sed "s/\/[^ ]*\s(NEW)/\n/g")" | mail -s "Pidora kernel autobuild $(date +'%d/%m/%y')" $target_email
