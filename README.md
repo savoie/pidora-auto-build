@@ -11,3 +11,4 @@ What it should do (eventually)
 -----------------
 - Handle errors (gracefully)
 - Be able to run as a cron job with little outside input
+- Only run in case of a new github commit
