@@ -5,10 +5,9 @@ What it does (presently)
 - Unpackages the build, updates tarballs, config file (using defaults), and spec file, then repackages
 - Uploads to koji as a scratch build
 - Hangs for a really long time as it waits on koji, then reports back with status as 'failed' or 'closed'
+- Sends an email notification containing task info and changed config settings
 
 What it should do (eventually)
 -----------------
-- Send email notification in case of failed upload
-- Send email notification of all changed config settings
 - Handle errors (gracefully)
 - Be able to run as a cron job with little outside input
