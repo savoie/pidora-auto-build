@@ -19,9 +19,18 @@ fi
 
 cd ~/pidora-build/kernel
 
-# Retrieves latest commit in default (most stable) branch
+# Retrieves latest commit
 commit_long=$(git ls-remote https://github.com/raspberrypi/linux.git | grep $branch | cut -f1)
 commit_short=$(echo $commit_long | cut -c1-7)
+
+if [ -e $commit_long ]
+then
+	exit
+else
+	find . -type d -name "raspberrypi-linux*" | xargs rm -rf
+	rm *
+fi
+
 wget https://github.com/raspberrypi/linux/tarball/$commit_long
 
 # Retrieves and extracts latest raspberry pi kernel from koji
@@ -56,7 +65,6 @@ sed -i "s/Mon Feb 05 2013/Mon Feb 04 2013/" raspberrypi-kernel.spec
 
 rpmdev-bumpspec -c 'updated to latest commit' -u 'pidora-auto-build' raspberrypi-kernel.spec
 sed -i "s/Release:\s*[0-9]*/Release:        1/" raspberrypi-kernel.spec
-exit
 
 # Sets up the document tree and moves files
 rpmdev-setuptree
@@ -78,12 +86,18 @@ task_id=$(armv6-koji build --scratch --wait $auto_tag $file_name | grep 'Created
 task_status=$(armv6-koji taskinfo $task_id | grep 'State:' | cut -d ' ' -f2)
 echo "$task_status (ID: $task_id)"
 
+if [ "$task_status" = "closed" ]
+then
+	if [ -n "$changes" ]
+	then
+		task_status='updated config'
+	fi
+fi
+
 # Sends email report
 msg="Pidora kernel autobuild ${version} ${commit_long}\n
 Status: $task_status\n
 Task ID: $task_id\n
-Link: http://japan.proximity.on.ca/koji/taskinfo?taskID=$task_id\n
-Configuration changes (set to default):\n----------------------\n"
+Link: http://japan.proximity.on.ca/koji/taskinfo?taskID=$task_id\n\n"
 
-
-echo -e "$msg$(echo $changes | sed "s/\s\[/: /g" | sed "s/\/[^ ]*\s(NEW)/\n/g")" | mail -s "Pidora kernel autobuild $(date +'%d/%m/%y')" $target_email
+echo -e "$msg$(echo $changes | sed "s/\s\[/: /g" | sed "s/\/[^ ]*\s(NEW)/\n/g")" | mail -s "[$task_status]Pidora kernel autobuild $(date +'%d/%m/%y')" $target_email
