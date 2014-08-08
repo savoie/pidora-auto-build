@@ -59,10 +59,6 @@ sed -i "s/%global commit_date\s*.*/%global commit_date  $date/" raspberrypi-kern
 sed -i "s/%global commit_short\s*.*/%global commit_short $commit_short/" raspberrypi-kernel.spec
 sed -i "s/%global commit_long\s*.*/%global commit_long  $commit_long/" raspberrypi-kernel.spec
 sed -i "s/Version:\s*.*/Version:        $version/" raspberrypi-kernel.spec
-
-# Fixes that annoying warning -- remove after it's been implemented in a koji build
-sed -i "s/Mon Feb 05 2013/Mon Feb 04 2013/" raspberrypi-kernel.spec
-
 rpmdev-bumpspec -c 'updated to latest commit' -u 'pidora-auto-build' raspberrypi-kernel.spec
 sed -i "s/Release:\s*[0-9]*/Release:        1/" raspberrypi-kernel.spec
 
