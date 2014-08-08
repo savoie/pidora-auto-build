@@ -1,5 +1,3 @@
-What it does (presently)
------------------
 - Downloads latest commits from the [Raspberry Pi github repo](https://github.com/raspberrypi)
 - Checks whether new commits have been made since last build (only runs if necessary)
 - Downloads the latest [kernel](http://japan.proximity.on.ca/koji/packageinfo?packageID=11981) and [firmware](http://japan.proximity.on.ca/koji/packageinfo?packageID=11987) builds from the Pidora koji
