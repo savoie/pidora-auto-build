@@ -1,0 +1,21 @@
+auto_tag='f20-rpfr-updates-automated' # Destination tag
+build_tag='f20-rpfr-updates' # Source tag
+target_email='ceya931@gmail.com' # Destination email for reports
+build_dir=$HOME/pidora-build # Permanent directory for storing build files
+
+# Optional variables (set to build from older commit/build)
+k_commit='' # Kernel commit id
+f_commit='' # Firmware commit id
+u_commit='' # Userland commit id
+k_build='' # Kernel koji build name
+f_build='' # Firmware koji build name
+
+# Most stable github branches
+k_branch='rpi-3.12.y' # Kernel
+f_branch='master' # Firmware
+u_branch='master' # Userland
+
+# rpmdev directory paths (do not change)
+sources="$HOME/rpmbuild/SOURCES"
+specs="$HOME/rpmbuild/SPECS"
+srpms="$HOME/rpmbuild/SRPMS"
