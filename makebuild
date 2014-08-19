@@ -1,19 +1,15 @@
 #!/bin/bash
 
-. .buildconfig # Use config file
+# Setup
+auto_tag='f20-rpfr-updates-automated' # Destination tag
+build_tag='f20-rpfr-updates'    # Source tag
+target_email='ceya931@gmail.com' # Destination email for reports
+branch='rpi-3.12.y'
 
 # Gets latest src rpm from koji and extracts it
 # - Requires build type ('kernel'/'vc')
 function get_build {
-        if [ "$1" = 'kernel' ] && [ -z "$k_build" ] || [ "$1" = 'vc' ] && [ -z "$f_build" ] # If build not specified in config
-	then
-		latest_build=$(armv6-koji latest-build $build_tag raspberrypi-$1 | sed -n "s/\([^ ]*\)\s*$build_tag\s*.*/\1/p") # Gets name of latest build
-	else
-		# Get build name from config
-		[ "$1" = 'kernel' ] && latest_build=$k_build
-		[ "$1" = 'vc' ] && latest_build=$f_build
-	fi
-
+        latest_build=$(armv6-koji latest-build $build_tag raspberrypi-$1 | sed -n "s/\([^ ]*\)\s*$build_tag\s*.*/\1/p") # Gets name of latest build
 	armv6-koji download-build --arch=src $latest_build # Downloads src.rpm file
 	rpm -i $latest_build.src.rpm # Extracts src.rpm to ~/rpmbuild/SOURCES and ~/rpmbuild/SPECS
 }
@@ -24,7 +20,7 @@ function update_config {
 
         # Determines current version number
         sublevel=$(cat raspberrypi-linux-${k_commit:0:7}/Makefile | sed -n 's/SUBLEVEL = \([0-9]*\)/\1/p') # Retrieves version sublevel (z in version number x.y.z) from Makefile
-        version=$(echo $k_branch | sed -n "s/.*-\([0-9]*\.[0-9]*\.\).*/\1$sublevel/p") # Combines branch and sublevel numbers to get version number
+        version=$(echo $branch | sed -n "s/.*-\([0-9]*\.[0-9]*\.\).*/\1$sublevel/p") # Combines branch and sublevel numbers to get version number
 
         # Updates the configuration file
         bunzip2 $sources/pidora-config*
@@ -35,11 +31,10 @@ function update_config {
         # - Sets any new options to the default recommendation
         # - Stores changed settings in variable 'changes'
         changes=$(yes '' | make oldconfig ARCH=arm | sed -n 's/[ \t]*\(.*\)\[\(.\)\/.*(NEW)/\n\1\2/p')
-	[ -z "$changes" ] && changes="No config changes"
 
         cp .config $sources/pidora-config-$version-${k_commit:0:7}
         bzip2 $sources/pidora-config-$version-${k_commit:0:7}
-        cd $build_dir
+        cd $HOME/pidora-build
 }
 
 # Updates spec file
@@ -82,7 +77,7 @@ function watch_build {
 	task_status=$(armv6-koji taskinfo $arch_id | sed -n 's/State: \(.*\)/\1/p') # Gets task status (typically closed/failed)
 
 	# Sends email confirmation	
-	[ "$2" = 'kernel' ] && commit=$k_commit || commit=$f_commit
+	[ $2 = 'kernel' ] && commit=$k_commit || commit=$f_commit
 	
 	msg="Pidora $2 autobuild $commit\n
 	Status: $task_status\n
@@ -92,20 +87,22 @@ function watch_build {
 	echo -e "$msg\n$changes" | mail -s "[$task_status]Pidora $2 autobuild $(date +'%d/%m/%y')" $target_email
 }
 
-# Get commit ids from config file or latest git commit
-[ -z "$k_commit" ] && k_commit=$(git ls-remote https://github.com/raspberrypi/linux.git | sed -n "s/\(.*\)\s.*$k_branch/\1/p") # Kernel
-[ -z "$f_commit" ] && f_commit=$(git ls-remote https://github.com/raspberrypi/firmware.git | sed -n "s/\(.*\)\s.*$f_branch/\1/p") # Firmware
-[ -z "$u_commit" ] && u_commit=$(git ls-remote https://github.com/raspberrypi/userland.git | sed -n "s/\(.*\)\s.*$u_branch/\1/p") # Userland
+k_commit=$(git ls-remote https://github.com/raspberrypi/linux.git | sed -n "s/\(.*\)\s.*rpi-3.12.y/\1/p") # Kernel commit id
+f_commit=$(git ls-remote https://github.com/raspberrypi/firmware.git | sed -n "s/\(.*\)\s.*master/\1/p") # Firmware commit id
+u_commit=$(git ls-remote https://github.com/raspberrypi/userland.git | sed -n "s/\(.*\)\s.*master/\1/p") # Userland commit id
 
 # Setup
-mkdir -p $build_dir # Make build directory if not exists
-cd $build_dir	
+mkdir -p $HOME/pidora-build
+cd $HOME/pidora-build	
 rpmdev-setuptree # Creates tree at $HOME/rpmbuild if not exists
-rpmdev-wipetree # Empties rpmdev tree
-find $build_dir -mindepth 1 ! -name $k_commit ! -name $f_commit ! -name $u_commit -exec rm -rf {} \; # Delete all files except tarballs of latest git commits
+rpmdev-wipetree # Empties rpmbuild tree
+sources="$HOME/rpmbuild/SOURCES" # Location of SOURCES
+specs="$HOME/rpmbuild/SPECS" # Location of SPECS
+srpms="$HOME/rpmbuild/SRPMS" # Location of SRPMS
+find $HOME/pidora-build -mindepth 1 ! -name $k_commit ! -name $f_commit ! -name $u_commit -exec rm -rf {} \; # Delete all files except tarballs of latest git commits
 
 # Perform a kernel build	
-if [ ! -e "$k_commit" ] # If latest kernel commit not already present
+if [ ! -e $k_commit ] # If latest kernel commit not already present
 then
 	wget https://github.com/raspberrypi/linux/tarball/$k_commit # Get latest tarball
         cp $k_commit $sources # Copy to ~/rpmbuild/SOURCES
@@ -116,11 +113,11 @@ then
 fi	
 
 # Perform a firmware build	
-if [ ! -e "$f_commit" ] || [ ! -e "$u_commit" ] # If both latest firmware & userland commits not already present
+if [ ! -e $f_commit ] || [ ! -e $u_commit ] # If both latest firmware & userland commits not already present
 then
 	# Get missing tarball(s)
-	[ ! -e "$f_commit" ] && wget https://github.com/raspberrypi/firmware/tarball/$f_commit
-	[ ! -e "$u_commit" ] && wget https://github.com/raspberrypi/userland/tarball/$u_commit
+	[ ! -e $f_commit ] && wget https://github.com/raspberrypi/firmware/tarball/$f_commit
+	[ ! -e $u_commit ] && wget https://github.com/raspberrypi/userland/tarball/$u_commit
 	
 	# Copy to ~/rpmbuild/SOURCES
         cp $f_commit $sources
