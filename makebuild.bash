@@ -2,6 +2,8 @@
 
 . .buildconfig # Use config file
 
+exec > /dev/null 2>&1 # Redirect all output to /dev/null
+
 # Set defaults
 build_f=True
 build_k=True
