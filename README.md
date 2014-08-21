@@ -20,6 +20,7 @@
 - Source and destination tag(s)
 - Target email for reports
 - Path to desired build directory
+- User name for changelog
 - Most stable git branches
 - (Optional) Git commit ids to use for build
 - (Optional) Koji build sources for use as 'framework' for build
