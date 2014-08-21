@@ -6,6 +6,9 @@
 - Uploads to koji in test tag
 - Sends an email notification containing task info and changed config settings
 
+####Dependencies
+- **fedora-packager** must be [installed](https://fedoraproject.org/wiki/Using_the_Koji_build_system?rd=PackageMaintainers/UsingKoji#Fedora_Account_System</u>.28FAS2.29_Setup) and [configured for armv6hl](http://blog.chris.tylers.info/index.php?/archives/272-Acessing-the-armv6hl-Koji-Buildsystem.html)
+
 ####Preferences
 #####Parameters:
 - **-k or --kernel:** Only builds new kernel
@@ -21,5 +24,3 @@
 - (Optional) Git commit ids to use for build
 - (Optional) Koji build sources for use as 'framework' for build
 
-####Dependencies
-**fedora-packager** must be [installed](https://fedoraproject.org/wiki/Using_the_Koji_build_system?rd=PackageMaintainers/UsingKoji#Fedora_Account_System</u>.28FAS2.29_Setup) and [configured for armv6hl](http://blog.chris.tylers.info/index.php?/archives/272-Acessing-the-armv6hl-Koji-Buildsystem.html)
