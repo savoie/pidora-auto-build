@@ -2,6 +2,7 @@ auto_tag='f20-rpfr-updates-automated' # Destination tag
 build_tag='f20-rpfr-updates' # Source tag
 target_email='ceya931@gmail.com' # Destination email for reports
 build_dir=$HOME/pidora-build # Permanent directory for storing build files
+username='autobot'
 
 # Optional variables (set to build from older commit/build)
 k_commit='' # Kernel commit id

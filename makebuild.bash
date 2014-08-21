@@ -74,7 +74,7 @@ function update_spec {
 	then
 		file="$specs/raspberrypi-vc.spec" # Set to update firmware spec
 		sed -i -e "s/%global commit_userland_date\s*.*/%global commit_userland_date  $(date +'%Y%m%d')/"\
-        		-e "s/%global commit_short_userland\s*.*/%global commit_short_userland ${2:0:7}/"\
+		-e "s/%global commit_short_userland\s*.*/%global commit_short_userland ${2:0:7}/"\
 			-e "s/%global commit_long_userland\s*.*/%global commit_long_userland  $2/" $file # Update userland info
 	else # If only kernel commit is present
 	        file="$specs/raspberrypi-kernel.spec" # Set to update kernel spec
@@ -88,7 +88,7 @@ function update_spec {
 		-e "s/Release:\s*[0-9]*/Release:        00/" $file # Set to 00 so bumpspec will set it to 1
 
 	
-	rpmdev-bumpspec -c 'updated to latest commit' $file
+	rpmdev-bumpspec -c 'updated to latest commit' -u $username $file
 }
 
 # Builds src rpm file and uploads to koji
