@@ -18,7 +18,7 @@
 
 #####The following can be customized by modifying .buildconfig:
 - Source and destination tag(s)
-- Target email for reports
+- Target email for reports (presently 'autobotlist', an alias defined on iraq)
 - Path to desired build directory
 - User name for changelog
 - Most stable git branches
